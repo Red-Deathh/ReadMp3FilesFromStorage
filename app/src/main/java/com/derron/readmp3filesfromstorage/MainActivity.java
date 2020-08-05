@@ -20,12 +20,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
-    public String SD_PATH = "/sdcard/";
-    MediaPlayer mediaPlayer = new MediaPlayer();
-    static ArrayList<String> musicList = new ArrayList<>();
+    private static ArrayAdapter<String> adapter;
+    private static ArrayList<String> musicList = new ArrayList<>();
+    public static String SD_PATH = "/sdcard/", testFiles[];
+    private final static String TAG = MainActivity.class.getName();
     ListView listView;
-    public static String[] testFiles;
-    private final String TAG = MainActivity.class.getName();
+    MediaPlayer mediaPlayer = new MediaPlayer();
 
     @Override
     protected void onCreate (Bundle savedInstanceState) {
@@ -33,17 +33,16 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         listView = findViewById(R.id.listview);
 
-        Log.v(TAG, "savedInstanceState: " +savedInstanceState);
-        if (savedInstanceState != null && !savedInstanceState.isEmpty() ) {
+        Log.v(TAG, "savedInstanceState: " + savedInstanceState);
+        if (savedInstanceState != null && !savedInstanceState.isEmpty()) {
             Log.v(TAG, "isEmpty(): " + savedInstanceState.isEmpty());
-//            listOfFiles.getStringArrayList("files");
             musicList = new ArrayList<String>(Arrays.asList(savedInstanceState.getStringArray("files")));
-            ArrayAdapter adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.songs, musicList);
-            listView.setAdapter(adapter);
+            adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.songs, musicList);
         } else {
             Log.v(TAG, "updateList()... ");
             updateList();
         }
+        listView.setAdapter(adapter);
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -69,8 +68,8 @@ public class MainActivity extends AppCompatActivity {
                 File[] files = rootDir.listFiles(new FilenameFilter() {
                     @Override
                     public boolean accept (File file, String name) {
-                        if (name.lastIndexOf('.') > 0 ){
-                            String extension = name.substring(name.lastIndexOf('.')+1).toLowerCase();
+                        if (name.lastIndexOf('.') > 0) {
+                            String extension = name.substring(name.lastIndexOf('.') + 1).toLowerCase();
                             Toast formats = Toast.makeText(MainActivity.this.getApplicationContext(), "Format " + extension + " found", Toast.LENGTH_SHORT);
 
                             switch (extension) {
@@ -86,9 +85,8 @@ public class MainActivity extends AppCompatActivity {
                                 case "rtx":
                                 case "xmp":
                                 case "wav":
-                                    if (formats != null) {
+                                    if (formats != null)
                                         formats.cancel();
-                                    }
                                     formats.show();
                                     return true;
                                 default:
@@ -98,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
                         return false;
                     }
                 });
+
                 if (files != null && files.length > 0) {
                     for (File file : files)
                         musicList.add(file.getName());
@@ -106,19 +105,15 @@ public class MainActivity extends AppCompatActivity {
             } catch (NullPointerException npe) {
                 Toast.makeText(this, npe.getLocalizedMessage(), Toast.LENGTH_LONG).show();
             }
+
         } else
             Toast.makeText(this, "Specified/Hard-coded path is not a directory!", Toast.LENGTH_LONG).show();
-
-        ArrayAdapter adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.songs, musicList);
-        listView.setAdapter(adapter);
+        adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.songs, musicList);
     }
 
     @Override
     protected void onSaveInstanceState (Bundle outState) {
         super.onSaveInstanceState(outState);
-//        if (listOfFiles.isEmpty() && musicList != null) {
-//            listOfFiles.putStringArrayList("files", musicList);
-//        }
         if (!musicList.isEmpty() /*&& testFiles == null*/) {
             testFiles = (musicList).toArray(new String[musicList.size()]); // new String[0] applicable too
             Log.v(TAG, "testFiles: " + Arrays.toString(testFiles));
