@@ -1,5 +1,6 @@
 package com.derron.readmp3filesfromstorage;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
@@ -16,19 +17,33 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
     public String SD_PATH = "/sdcard/";
     MediaPlayer mediaPlayer = new MediaPlayer();
     static ArrayList<String> musicList = new ArrayList<>();
     ListView listView;
+    public static String[] testFiles;
+    private final String TAG = MainActivity.class.getName();
 
     @Override
     protected void onCreate (Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         listView = findViewById(R.id.listview);
-        updateList();
+
+        Log.v(TAG, "savedInstanceState: " +savedInstanceState);
+        if (savedInstanceState != null && !savedInstanceState.isEmpty() ) {
+            Log.v(TAG, "isEmpty(): " + savedInstanceState.isEmpty());
+//            listOfFiles.getStringArrayList("files");
+            musicList = new ArrayList<String>(Arrays.asList(savedInstanceState.getStringArray("files")));
+            ArrayAdapter adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.songs, musicList);
+            listView.setAdapter(adapter);
+        } else {
+            Log.v(TAG, "updateList()... ");
+            updateList();
+        }
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -84,13 +99,12 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
                 if (files != null && files.length > 0) {
-                    for (File file : files) {
+                    for (File file : files)
                         musicList.add(file.getName());
-                    }
                 } else
                     Toast.makeText(this, "File(s) couldn't be found.", Toast.LENGTH_LONG).show();
             } catch (NullPointerException npe) {
-                npe.getLocalizedMessage();
+                Toast.makeText(this, npe.getLocalizedMessage(), Toast.LENGTH_LONG).show();
             }
         } else
             Toast.makeText(this, "Specified/Hard-coded path is not a directory!", Toast.LENGTH_LONG).show();
@@ -99,4 +113,17 @@ public class MainActivity extends AppCompatActivity {
         listView.setAdapter(adapter);
     }
 
+    @Override
+    protected void onSaveInstanceState (Bundle outState) {
+        super.onSaveInstanceState(outState);
+//        if (listOfFiles.isEmpty() && musicList != null) {
+//            listOfFiles.putStringArrayList("files", musicList);
+//        }
+        if (!musicList.isEmpty() /*&& testFiles == null*/) {
+            testFiles = (musicList).toArray(new String[musicList.size()]); // new String[0] applicable too
+            Log.v(TAG, "testFiles: " + Arrays.toString(testFiles));
+            outState.putStringArray("files", testFiles);
+        } else
+            outState.clear();
+    }
 }
