@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TextView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/music_list"
+    android:id="@+id/single_song"
     android:layout_width="match_parent"
     android:text="Derron is a good boy"
     android:textSize="20sp"

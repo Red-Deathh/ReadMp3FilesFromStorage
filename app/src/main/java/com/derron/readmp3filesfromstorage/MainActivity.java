@@ -1,59 +1,57 @@
 package com.derron.readmp3filesfromstorage;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import android.content.Context;
 import android.media.MediaPlayer;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
+import android.os.Environment;
 import android.widget.Toast;
-
 import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity {
-    private static ArrayAdapter<String> adapter;
-    private static ArrayList<String> musicList = new ArrayList<>();
-    public static String SD_PATH = "/sdcard/", testFiles[];
-    private final static String TAG = MainActivity.class.getName();
-    ListView listView;
-    MediaPlayer mediaPlayer = new MediaPlayer();
+
+    //private final static String TAG = "MainActivity";
+    final String MEDIA_PATH = Environment.getExternalStorageDirectory().getPath() + "/";
+    ArrayList<HashMap<String,String>> songList;
 
     @Override
     protected void onCreate (Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        listView = findViewById(R.id.listview);
+        //recyclerView reference
+        RecyclerView recyclerView = findViewById(R.id.recyclerView);
 
-        Log.v(TAG, "savedInstanceState: " + savedInstanceState);
-        if (savedInstanceState != null && !savedInstanceState.isEmpty()) {
-            Log.v(TAG, "isEmpty(): " + savedInstanceState.isEmpty());
-            musicList = new ArrayList<String>(Arrays.asList(savedInstanceState.getStringArray("files")));
-            adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.songs, musicList);
-        } else {
-            Log.v(TAG, "updateList()... ");
-            updateList();
-        }
-        listView.setAdapter(adapter);
+        //recyclerView setup
+        recyclerView.setHasFixedSize(true);
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(MainActivity.this,
+                LinearLayoutManager.VERTICAL, false);
+        SongArrayAdapter adapter = new SongArrayAdapter(getPlayList(MEDIA_PATH));
+        recyclerView.setLayoutManager(layoutManager);
+        recyclerView.setAdapter(adapter);
 
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        //handling clickEvents
+        adapter.setOnSongClickListener(new SongArrayAdapter.OnSongClickListener() {
             @Override
-            public void onItemClick (AdapterView<?> adapterView, View view, int i, long l) {
+            public void onSongClick(int position) {
+                MediaPlayer mp = new MediaPlayer();
                 try {
-                    mediaPlayer.reset();
-                    mediaPlayer.setDataSource(SD_PATH + musicList.get(i));
-                    mediaPlayer.prepare();
-                    mediaPlayer.start();
-                } catch (IOException e) {
-                    Log.v(getString(R.string.app_name), e.getMessage());
+
+                    if (mp.isPlaying()){
+                        mp.stop();
+                    }
+
+                    assert songList != null;
+                    mp.setDataSource(songList.get(position).get("file_path"));
+                    mp.prepare();
+                    mp.start();
+                    Toast.makeText(MainActivity.this,"Song Playing",Toast.LENGTH_SHORT).show();
+                }
+                catch (Exception e){
+                    e.printStackTrace();
                 }
 
             }
@@ -61,64 +59,35 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void updateList () {
-        File rootDir = new File(SD_PATH);
-        if (rootDir.isDirectory()) {
-            try {
-                File[] files = rootDir.listFiles(new FilenameFilter() {
-                    @Override
-                    public boolean accept (File file, String name) {
-                        if (name.lastIndexOf('.') > 0) {
-                            String extension = name.substring(name.lastIndexOf('.') + 1).toLowerCase();
-                            Toast formats = Toast.makeText(MainActivity.this.getApplicationContext(), "Format " + extension + " found", Toast.LENGTH_SHORT);
+    ArrayList<HashMap<String,String>> getPlayList(String rootPath) {
+        ArrayList<HashMap<String,String>> fileList = new ArrayList<>();
 
-                            switch (extension) {
-                                case "mp3":
-                                case "aac":
-                                case "flac":
-                                case "gsm":
-                                case "m4a":
-                                case "mid":
-                                case "ogg":
-                                case "ota":
-                                case "rtttl":
-                                case "rtx":
-                                case "xmp":
-                                case "wav":
-                                    if (formats != null)
-                                        formats.cancel();
-                                    formats.show();
-                                    return true;
-                                default:
-                                    return false;
-                            }
-                        }
-                        return false;
+        try {
+            File rootFolder = new File(rootPath);
+            File[] files = rootFolder.listFiles(); //here you will get NPE if directory doesn't contains any file,handle it like this.
+            assert files != null;
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    if (getPlayList(file.getAbsolutePath()) != null) {
+                        fileList.addAll(getPlayList(file.getAbsolutePath()));
+                    } else {
+                        break;
                     }
-                });
+                } else if (file.getName().endsWith(".mp3")
+                        || file.getName().endsWith(".aac")
+                        || file.getName().endsWith(".m4a")
+                        || file.getName().endsWith(".ogg")
+                        || file.getName().endsWith(".wav")) {
+                    HashMap<String, String> song = new HashMap<>();
+                    song.put("file_path", file.getAbsolutePath());
+                    song.put("file_name", file.getName());
+                    fileList.add(song);
+                }
 
-                if (files != null && files.length > 0) {
-                    for (File file : files)
-                        musicList.add(file.getName());
-                } else
-                    Toast.makeText(this, "File(s) couldn't be found.", Toast.LENGTH_LONG).show();
-            } catch (NullPointerException npe) {
-                Toast.makeText(this, npe.getLocalizedMessage(), Toast.LENGTH_LONG).show();
             }
-
-        } else
-            Toast.makeText(this, "Specified/Hard-coded path is not a directory!", Toast.LENGTH_LONG).show();
-        adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.songs, musicList);
-    }
-
-    @Override
-    protected void onSaveInstanceState (Bundle outState) {
-        super.onSaveInstanceState(outState);
-        if (!musicList.isEmpty() /*&& testFiles == null*/) {
-            testFiles = (musicList).toArray(new String[musicList.size()]); // new String[0] applicable too
-            Log.v(TAG, "testFiles: " + Arrays.toString(testFiles));
-            outState.putStringArray("files", testFiles);
-        } else
-            outState.clear();
+            return fileList;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
