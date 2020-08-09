@@ -1,23 +1,28 @@
 package com.derron.readmp3filesfromstorage;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Environment;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class MainActivity extends AppCompatActivity {
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-    //private final static String TAG = "MainActivity";
-    final String MEDIA_PATH = Environment.getExternalStorageDirectory().getPath() + "/";
-    ArrayList<HashMap<String, String>> songList;
+
+public class MainActivity extends AppCompatActivity implements
+        LoaderManager.LoaderCallbacks<ArrayList<HashMap<String, String>>>{
+
+    private final static String TAG = MainActivity.class.getName(), MEDIA_PATH = Environment.getExternalStorageDirectory().getPath() + "/";;
+    private final static int LOADER_ID = 12;
+    private ArrayList<HashMap<String, String>> songList;
 
     @Override
     protected void onCreate (Bundle savedInstanceState) {
@@ -27,12 +32,14 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
 
         //recyclerView setup
-        recyclerView.setHasFixedSize(true);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(MainActivity.this,
                 LinearLayoutManager.VERTICAL, false);
+
         songList = new ArrayList<>(getPlayList(MEDIA_PATH));
         SongArrayAdapter adapter = new SongArrayAdapter(songList);
+
         recyclerView.setLayoutManager(layoutManager);
+        recyclerView.setHasFixedSize(true);
         recyclerView.setAdapter(adapter);
 
         //handling clickEvents
@@ -41,7 +48,6 @@ public class MainActivity extends AppCompatActivity {
             public void onSongClick (int position) {
                 MediaPlayer mp = new MediaPlayer();
                 try {
-
                     if (mp.isPlaying()) {
                         mp.stop();
                     }
@@ -51,8 +57,11 @@ public class MainActivity extends AppCompatActivity {
                     mp.prepare();
                     mp.start();
                     Toast.makeText(MainActivity.this, "Song Playing", Toast.LENGTH_SHORT).show();
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (AssertionError ae) {
+                    Toast.makeText(MainActivity.this, "No files could be found!", Toast.LENGTH_SHORT).show();
+                    ae.printStackTrace();
+                } catch (IOException ioe) {
+                    Toast.makeText(MainActivity.this, "File could not be played... Sorry! Need to implement AudioManager", Toast.LENGTH_SHORT).show();
                 }
 
             }
@@ -90,5 +99,20 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    @Override
+    public Loader<ArrayList<HashMap<String, String>>> onCreateLoader (int id, Bundle args) {
+        return null;
+    }
+
+    @Override
+    public void onLoadFinished (Loader<ArrayList<HashMap<String, String>>> loader, ArrayList<HashMap<String, String>> data) {
+
+    }
+
+    @Override
+    public void onLoaderReset (Loader<ArrayList<HashMap<String, String>>> loader) {
+
     }
 }
