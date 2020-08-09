@@ -16,10 +16,11 @@
         android:scrollbars="none" />
 
     <ProgressBar
+        android:id="@+id/pb_load_files"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:visibility="invisible"
-        android:layout_gravity="center" />
+        android:layout_gravity="center"
+        android:visibility="invisible" />
 
     <TextView
         android:id="@+id/no_files"
@@ -29,6 +30,6 @@
         android:gravity="center"
         android:visibility="invisible"
         android:textSize="24sp"
-        tools:text="Directory empty!" />
+        android:text="@string/no_files_text" />
 
 </FrameLayout>
