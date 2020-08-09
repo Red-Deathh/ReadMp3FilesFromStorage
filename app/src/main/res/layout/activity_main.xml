@@ -19,8 +19,7 @@
         android:id="@+id/pb_load_files"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="invisible" />
+        android:layout_gravity="center" />
 
     <TextView
         android:id="@+id/no_files"
@@ -28,7 +27,6 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
         android:gravity="center"
-        android:visibility="invisible"
         android:textSize="24sp"
         android:text="@string/no_files_text" />
 

@@ -46,21 +46,17 @@ public class MainActivity extends AppCompatActivity implements
         pbLoadFiles = (ProgressBar) findViewById(R.id.pb_load_files);
         tvNoFiles = (TextView) findViewById(R.id.no_files);
 
-//        songList = new ArrayList<>(getPlayList(MEDIA_PATH));
-
         pbLoadFiles.setVisibility(View.VISIBLE);
         tvNoFiles.setVisibility(View.VISIBLE);
 
         LoaderManager loader = getSupportLoaderManager();
-        Bundle bundle = new Bundle();
-        bundle.putString("path", MEDIA_PATH);
-        loader.initLoader(LOADER_ID, bundle, MainActivity.this);
+        Bundle root = new Bundle();
+        root.putString("path", MEDIA_PATH);
+        loader.initLoader(LOADER_ID, root, MainActivity.this);
     }
 
     ArrayList<HashMap<String, String>> getPlayList (String rootPath) {
         ArrayList<HashMap<String, String>> fileList = new ArrayList<>();
-//        Log.i(TAG, "getPlayList()");
-//        Log.i(TAG, "rootPath:: " + rootPath);
         try {
             File rootFolder = new File(rootPath);
             File[] files = rootFolder.listFiles(); //here you will get NPE if directory doesn't contains any file,handle it like this.
@@ -96,15 +92,13 @@ public class MainActivity extends AppCompatActivity implements
     public Loader<ArrayList<HashMap<String, String>>> onCreateLoader (int id, final Bundle args) {
         Log.i(TAG, "onCreateLoader()");
         return new AsyncTaskLoader<ArrayList<HashMap<String, String>>>(this) {
-
             ArrayList<HashMap<String, String>> fileList = null;
-            String rootDir = args.getString("path");
 
             @Override
             protected void onStartLoading () {
                 Log.i(TAG, "onStartLoading()");
                 if (fileList == null) {
-                    pbLoadFiles.setVisibility(View.INVISIBLE);
+                    pbLoadFiles.setVisibility(View.VISIBLE);
                     tvNoFiles.setVisibility(View.GONE);
                     forceLoad();
                 } else {
@@ -115,28 +109,29 @@ public class MainActivity extends AppCompatActivity implements
             @Override
             public ArrayList<HashMap<String, String>> loadInBackground () {
                 Log.i(TAG, "loadInBackground():: The search starts...");
+                String rootDir = args.getString("path");
                 return getPlayList(rootDir);
             }
 
             @Override
-            public void deliverResult (ArrayList<HashMap<String, String>> data) {
-                fileList = data;
-                super.deliverResult(data);
+            public void deliverResult (ArrayList<HashMap<String, String>> songs) {
+                fileList = songs;
+                super.deliverResult(songs);
             }
         };
     }
 
     @Override
-    public void onLoadFinished (Loader<ArrayList<HashMap<String, String>>> loader, final ArrayList<HashMap<String, String>> data) {
-        Log.i(TAG, "onLoadFinished()");
+    public void onLoadFinished (Loader<ArrayList<HashMap<String, String>>> loader, final ArrayList<HashMap<String, String>> songList) {
+        Log.i(TAG, "onLoadFinished()::\ndata:: " + songList);
         pbLoadFiles.setVisibility(View.INVISIBLE);
-        if (data != null) {
+        if (songList.size() > 0) {
             tvNoFiles.setVisibility(View.GONE);
 
             //recyclerView setup
             RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(MainActivity.this,
                     LinearLayoutManager.VERTICAL, false);
-            SongArrayAdapter adapter = new SongArrayAdapter(data);
+            SongArrayAdapter adapter = new SongArrayAdapter(songList);
 
             recyclerView.setLayoutManager(layoutManager);
             recyclerView.setHasFixedSize(true);
@@ -152,8 +147,8 @@ public class MainActivity extends AppCompatActivity implements
                             mp.stop();
                         }
 
-                        assert data != null;
-                        mp.setDataSource(data.get(position).get("file_path"));
+                        assert songList != null;
+                        mp.setDataSource(songList.get(position).get("file_path"));
                         mp.prepare();
                         mp.start();
                         Toast.makeText(MainActivity.this, "Song Playing", Toast.LENGTH_SHORT).show();
