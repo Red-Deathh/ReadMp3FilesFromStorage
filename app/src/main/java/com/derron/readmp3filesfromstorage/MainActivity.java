@@ -8,6 +8,7 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Environment;
 import android.widget.Toast;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,7 +17,7 @@ public class MainActivity extends AppCompatActivity {
 
     //private final static String TAG = "MainActivity";
     final String MEDIA_PATH = Environment.getExternalStorageDirectory().getPath() + "/";
-    ArrayList<HashMap<String,String>> songList;
+    ArrayList<HashMap<String, String>> songList;
 
     @Override
     protected void onCreate (Bundle savedInstanceState) {
@@ -29,18 +30,19 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setHasFixedSize(true);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(MainActivity.this,
                 LinearLayoutManager.VERTICAL, false);
-        SongArrayAdapter adapter = new SongArrayAdapter(getPlayList(MEDIA_PATH));
+        songList = new ArrayList<>(getPlayList(MEDIA_PATH));
+        SongArrayAdapter adapter = new SongArrayAdapter(songList);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(adapter);
 
         //handling clickEvents
         adapter.setOnSongClickListener(new SongArrayAdapter.OnSongClickListener() {
             @Override
-            public void onSongClick(int position) {
+            public void onSongClick (int position) {
                 MediaPlayer mp = new MediaPlayer();
                 try {
 
-                    if (mp.isPlaying()){
+                    if (mp.isPlaying()) {
                         mp.stop();
                     }
 
@@ -48,9 +50,8 @@ public class MainActivity extends AppCompatActivity {
                     mp.setDataSource(songList.get(position).get("file_path"));
                     mp.prepare();
                     mp.start();
-                    Toast.makeText(MainActivity.this,"Song Playing",Toast.LENGTH_SHORT).show();
-                }
-                catch (Exception e){
+                    Toast.makeText(MainActivity.this, "Song Playing", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
 
@@ -59,8 +60,8 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    ArrayList<HashMap<String,String>> getPlayList(String rootPath) {
-        ArrayList<HashMap<String,String>> fileList = new ArrayList<>();
+    ArrayList<HashMap<String, String>> getPlayList (String rootPath) {
+        ArrayList<HashMap<String, String>> fileList = new ArrayList<>();
 
         try {
             File rootFolder = new File(rootPath);
