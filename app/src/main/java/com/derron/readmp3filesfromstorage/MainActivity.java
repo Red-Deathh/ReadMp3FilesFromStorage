@@ -1,72 +1,67 @@
 package com.derron.readmp3filesfromstorage;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.media.MediaPlayer;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
+import android.view.View;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class MainActivity extends AppCompatActivity {
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.AsyncTaskLoader;
+import androidx.loader.content.Loader;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-    //private final static String TAG = "MainActivity";
-    final String MEDIA_PATH = Environment.getExternalStorageDirectory().getPath() + "/";
-    ArrayList<HashMap<String, String>> songList;
+
+public class MainActivity extends AppCompatActivity implements
+        LoaderManager.LoaderCallbacks<ArrayList<HashMap<String, String>>> {
+
+    private final static String TAG = MainActivity.class.getName(), MEDIA_PATH = Environment.getExternalStorageDirectory().getPath() + "/";
+    ;
+    private final static int LOADER_ID = 12;
+    private ArrayList<HashMap<String, String>> songList;
+    private ProgressBar pbLoadFiles;
+    RecyclerView recyclerView;
+    private TextView tvNoFiles;
 
     @Override
     protected void onCreate (Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         //recyclerView reference
-        RecyclerView recyclerView = findViewById(R.id.recyclerView);
+        recyclerView = findViewById(R.id.recyclerView);
+        pbLoadFiles = (ProgressBar) findViewById(R.id.pb_load_files);
+        tvNoFiles = (TextView) findViewById(R.id.no_files);
 
-        //recyclerView setup
-        recyclerView.setHasFixedSize(true);
-        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(MainActivity.this,
-                LinearLayoutManager.VERTICAL, false);
-        songList = new ArrayList<>(getPlayList(MEDIA_PATH));
-        SongArrayAdapter adapter = new SongArrayAdapter(songList);
-        recyclerView.setLayoutManager(layoutManager);
-        recyclerView.setAdapter(adapter);
+        pbLoadFiles.setVisibility(View.VISIBLE);
+        tvNoFiles.setVisibility(View.VISIBLE);
 
-        //handling clickEvents
-        adapter.setOnSongClickListener(new SongArrayAdapter.OnSongClickListener() {
-            @Override
-            public void onSongClick (int position) {
-                MediaPlayer mp = new MediaPlayer();
-                try {
-
-                    if (mp.isPlaying()) {
-                        mp.stop();
-                    }
-
-                    assert songList != null;
-                    mp.setDataSource(songList.get(position).get("file_path"));
-                    mp.prepare();
-                    mp.start();
-                    Toast.makeText(MainActivity.this, "Song Playing", Toast.LENGTH_SHORT).show();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-            }
-        });
-
+        LoaderManager loader = getSupportLoaderManager();
+        Bundle root = new Bundle();
+        root.putString("path", MEDIA_PATH);
+        loader.initLoader(LOADER_ID, root, MainActivity.this);
     }
 
     ArrayList<HashMap<String, String>> getPlayList (String rootPath) {
         ArrayList<HashMap<String, String>> fileList = new ArrayList<>();
-
         try {
             File rootFolder = new File(rootPath);
             File[] files = rootFolder.listFiles(); //here you will get NPE if directory doesn't contains any file,handle it like this.
             assert files != null;
+
             for (File file : files) {
                 if (file.isDirectory()) {
                     if (getPlayList(file.getAbsolutePath()) != null) {
@@ -87,8 +82,92 @@ public class MainActivity extends AppCompatActivity {
 
             }
             return fileList;
-        } catch (Exception e) {
+        } catch (AssertionError ae) {
+            Log.i(TAG, ae.getLocalizedMessage());
             return null;
         }
+    }
+
+    @Override
+    public Loader<ArrayList<HashMap<String, String>>> onCreateLoader (int id, final Bundle args) {
+        Log.i(TAG, "onCreateLoader()");
+        return new AsyncTaskLoader<ArrayList<HashMap<String, String>>>(this) {
+            ArrayList<HashMap<String, String>> fileList = null;
+
+            @Override
+            protected void onStartLoading () {
+                Log.i(TAG, "onStartLoading()");
+                if (fileList == null) {
+                    pbLoadFiles.setVisibility(View.VISIBLE);
+                    tvNoFiles.setVisibility(View.GONE);
+                    forceLoad();
+                } else {
+                    deliverResult(fileList);
+                }
+            }
+
+            @Override
+            public ArrayList<HashMap<String, String>> loadInBackground () {
+                Log.i(TAG, "loadInBackground():: The search starts...");
+                String rootDir = args.getString("path");
+                return getPlayList(rootDir);
+            }
+
+            @Override
+            public void deliverResult (ArrayList<HashMap<String, String>> songs) {
+                fileList = songs;
+                super.deliverResult(songs);
+            }
+        };
+    }
+
+    @Override
+    public void onLoadFinished (Loader<ArrayList<HashMap<String, String>>> loader, final ArrayList<HashMap<String, String>> songList) {
+        Log.i(TAG, "onLoadFinished()::\ndata:: " + songList);
+        pbLoadFiles.setVisibility(View.INVISIBLE);
+        if (songList.size() > 0) {
+            tvNoFiles.setVisibility(View.GONE);
+
+            //recyclerView setup
+            RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(MainActivity.this,
+                    LinearLayoutManager.VERTICAL, false);
+            SongArrayAdapter adapter = new SongArrayAdapter(songList);
+
+            recyclerView.setLayoutManager(layoutManager);
+            recyclerView.setHasFixedSize(true);
+            recyclerView.setAdapter(adapter);
+
+            //handling clickEvents
+            adapter.setOnSongClickListener(new SongArrayAdapter.OnSongClickListener() {
+                @Override
+                public void onSongClick (int position) {
+                    MediaPlayer mp = new MediaPlayer();
+                    try {
+                        if (mp.isPlaying()) {
+                            mp.stop();
+                        }
+
+                        assert songList != null;
+                        mp.setDataSource(songList.get(position).get("file_path"));
+                        mp.prepare();
+                        mp.start();
+                        Toast.makeText(MainActivity.this, "Song Playing", Toast.LENGTH_SHORT).show();
+                    } catch (AssertionError ae) {
+                        Toast.makeText(MainActivity.this, "No files could be found!", Toast.LENGTH_SHORT).show();
+                        ae.printStackTrace();
+                    } catch (IOException ioe) {
+                        Toast.makeText(MainActivity.this, "File could not be played... Sorry! Need to implement AudioManager", Toast.LENGTH_SHORT).show();
+                    }
+
+                }
+            });
+        } else
+            tvNoFiles.setVisibility(View.VISIBLE);
+
+    }
+
+    @Override
+    public void onLoaderReset (Loader<ArrayList<HashMap<String, String>>> loader) {
+        pbLoadFiles.setVisibility(View.VISIBLE);
     }
 }
